@@ -14,7 +14,7 @@ const generateWeek=function smartWeek(){
  const first=startWeek(selectedDate),x=p(),days=x.days||[],all=[];
  for(let i=0;i<7;i++){const date=isoAdd(first,i);if(days.includes(new Date(date+'T12:00:00').getDay()))all.push(date)}
  if(!all.length){toast('Selecciona los días disponibles');weekSettings();return}
- const goal=x.goal||'bienestar',weekOffset=Math.floor(new Date(first+'T12:00:00').getTime()/604800000),restricted=!!x.special||/embarazo|operad|cirug|lesi[oó]n|dolor|rehabilitaci/i.test(x.restrictions||'');
+ const goal=x.goal||'bienestar',weekOffset=Math.floor(new Date(first+'T12:00:00').getTime()/604800000)+(x.planVersion||0),restricted=!!x.special||/embarazo|operad|cirug|lesi[oó]n|dolor|rehabilitaci/i.test(x.restrictions||'');
  let added=0;
  for(let i=0;i<all.length;i++){
    let date=all[i];if(own(state.plans).some(y=>y.date===date))continue;
