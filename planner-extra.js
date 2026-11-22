@@ -64,7 +64,7 @@ function mealPlanSection(){
  var dates=fitMealDays(),current=fitMealsOn(selectedDate);
  var buttons=dates.map(function(d){return '<button class="pill '+(d===selectedDate?'on':'')+'" onclick="selectedDate=\''+d+'\';render()">'+formatDay(d).slice(0,3)+'<br>'+d.slice(-2)+'</button>'}).join('');
  var meals=current.map(function(m){return '<div class="meal"><b>'+esc(m.meal)+' · '+esc(m.name)+'</b><div class="muted small">≈ '+m.kcal+' kcal · P '+m.protein+' g · C '+m.carbs+' g · G '+m.fats+' g</div><div class="info">Ingredientes: '+esc(m.ingredients)+' · tamaño orientativo '+m.portion+'% de la receta base</div><button class="btn ghost tiny" onclick="fitChangeMeal(\''+m.id+'\')">Cambiar plato</button></div>'}).join('');
- return '<div class="card"><div class="between"><b>Menú de la semana</b><button class="btn tiny secondary" onclick="fitGenerateMeals()">Generar menú</button></div><div class="weekbar">'+buttons+'</div>'+(current.length?meals+'<button class="btn secondary" onclick="fitShopping()">Crear lista de la compra</button>':'<div class="empty">Sin menú generado todavía. Pulsa Generar menú.</div>')+'<div class="info">Menús de ejemplo con estimaciones nutricionales. No son prescripciones ni tienen en cuenta todas las alergias y restricciones. Revisa los ingredientes y las porciones.</div></div>';
+ return '<div class="card"><div class="between"><b>Menú de la semana</b><button class="btn tiny secondary" onclick="fitGenerateMeals()">Generar menú</button></div><div class="weekbar">'+buttons+'</div>'+(current.length?meals+'<div class="actions"><button class="btn secondary" onclick="fitShopping()">Lista de compra</button><button class="btn ghost" onclick="fitAdjustToday()">Ajustar hoy</button></div>':'<div class="empty">Sin menú generado todavía. Pulsa Generar menú.</div>')+'<div class="info">Menús de ejemplo con estimaciones nutricionales. No son prescripciones ni tienen en cuenta todas las alergias y restricciones. Revisa los ingredientes y las porciones.</div></div>';
 }
 function regenerateWeek(){
  var dates=fitMealDays(),pending=own(state.plans).filter(function(x){return dates.includes(x.date)&&!workDay(x.date).length});
@@ -89,4 +89,43 @@ function saveInjuryCheck(e){
  x.injuryActivities=f.getAll('injuryActivities');x.injuryCheckComplete=true;
  if(!save())return;
  closeModal();generateWeek();
+}
+
+
+/* Nubivanta Fit 1.6: panel semanal y acciones de un toque. */
+function fitOpenWeek(){
+ const dates=fitMealDays(),n=dates.filter(d=>fitMealsOn(d).length).length;
+ let card=dates.map(d=>{
+  const w=plDay(d),meals=fitMealsOn(d),active=workDay(d).length>0,cal=meals.reduce((a,b)=>a+b.kcal,0);
+  return '<div class="dayrow"><div class="daybadge">'+formatDay(d).slice(0,3)+'<br><span class="muted small">'+d.slice(-2)+'</span></div><div><b>'+esc(w?w.title:'Descanso / libre')+'</b><div class="muted small">'+(w?Math.round(w.minutes)+' min · ':'')+(active?'✓ Entrenado':'')+'</div><div class="muted small">'+(meals.length?meals.length+' comidas · ≈'+cal+' kcal':'Menú por generar')+'</div><button class="btn tiny secondary" onclick="selectedDate=\''+d+'\';closeModal();go(\'nutricion\')">Ver comidas</button></div></div>';
+ }).join('');
+ modal('Tu semana completa','<div class="actions"><button class="btn" onclick="closeModal();fitCreateFullWeek()">Preparar mi semana</button></div><div class="card">'+card+'</div>');
+}
+function fitCreateFullWeek(){
+ const first=startWeek(selectedDate),x=p(),dates=fitMealDays();
+ const incomplete=/operad|cirug|menisc|ligamento|lesi[oó]n|rodilla/i.test(x.restrictions||'')&&!x.injuryCheckComplete;
+ if(incomplete){injuryCheck();return}
+ if(!Array.isArray(state.foodPlans))state.foodPlans=[];
+ if(!dates.some(d=>fitMealsOn(d).length)&&!fitRestricted())fitGenerateMeals();
+ generateWeek();
+}
+function fitEatPlanned(id){
+ const m=(state.foodPlans||[]).find(x=>x.id===id);if(!m)return;
+ if(foodDay(m.date).some(x=>x.plannedId===m.id)){toast('Ya estaba registrada');return}
+ state.meals.push({id:uid(),pid:p().id,plannedId:m.id,date:m.date,meal:m.meal,name:m.name,kcal:m.kcal,protein:m.protein,carbs:m.carbs,fats:m.fats,photo:''});
+ if(!save()){state.meals.pop();return}
+ render();toast('Comida registrada');
+}
+function fitAdjustToday(){
+ const planned=fitMealsOn(selectedDate),logged=foodDay(selectedDate),available=planned.filter(m=>!logged.some(z=>z.plannedId===m.id));
+ if(!available.length){toast('Genera un menú o registra una comida');return}
+ const goal=targets(selectedDate),remaining=Math.max(0,goal-money(logged));
+ const plannedKcal=available.reduce((s,m)=>s+m.kcal,0);
+ const factor=plannedKcal?remaining/plannedKcal:1;
+ modal('Ajustar comidas pendientes','<p class="muted">Objetivo diario orientativo: '+Math.round(goal)+' kcal. Ya has registrado '+Math.round(money(logged))+' kcal. Puedes redistribuir lo que queda, pero no necesitas compensar excesos dejando de comer.</p><div class="notice">Las estimaciones no sustituyen una evaluación nutricional. Si la ingesta restante resulta muy baja, prioriza una alimentación suficiente.</div>'+available.map(m=>'<div class="meal"><b>'+esc(m.meal)+' · '+esc(m.name)+'</b><div class="muted small">Previsto: '+m.kcal+' kcal · Distribución orientativa: '+Math.round(m.kcal*Math.min(1.35,Math.max(.75,factor)))+' kcal</div></div>').join('')+'<div class="actions"><button class="btn secondary" onclick="closeModal()">Entendido</button></div>');
+}
+function fitWeekSummary(){
+ const dates=fitMealDays(),workouts=own(state.workouts).filter(w=>dates.includes(w.date)),meals=own(state.meals).filter(m=>dates.includes(m.date)),plans=own(state.plans).filter(p=>dates.includes(p.date));
+ const done=dates.filter(d=>workouts.some(w=>w.date===d)).length,avg=meals.length?Math.round(meals.reduce((a,m)=>a+m.kcal,0)/Math.max(1,new Set(meals.map(m=>m.date)).size)):0;
+ modal('Resumen semanal','<div class="grid2"><div class="stat"><strong>'+done+'</strong><span class="small">Días con actividad</span></div><div class="stat"><strong>'+plans.length+'</strong><span class="small">Sesiones programadas</span></div><div class="stat"><strong>'+meals.length+'</strong><span class="small">Comidas registradas</span></div><div class="stat"><strong>'+avg+'</strong><span class="small">kcal/día con registros</span></div></div><p class="muted small">El promedio es solo de los días con comidas anotadas y no incluye alimentos sin registrar.</p><button class="btn secondary" onclick="closeModal();printReport()">Imprimir informe PDF</button>');
 }
