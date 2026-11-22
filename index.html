@@ -28,6 +28,13 @@ const generateWeek=function smartWeek(){
    else if(goal==='resistencia'||goal==='competicion'){type=['correr','fuerza','bici','movilidad'][(i+weekOffset)%4];reason='Resistencia combinada con fuerza y movilidad. Ajusta las intensidades a tu nivel.'}
    else if(goal==='ganar'||goal==='perder'||goal==='recomposicion'){type=['fuerza','funcional','fuerza','movilidad'][(i+weekOffset)%4];reason='Alternancia de fuerza, actividad funcional y movilidad.'}
    else{type=['funcional','movilidad','bici'][(i+weekOffset)%3];reason='Actividad variada orientada a la constancia.'}
+   if(x.injuryCheckComplete&&!restricted){
+     const allowed=x.injuryActivities||[];
+     if(type==='correr'&&!allowed.includes('correr'))type=allowed.includes('bici')?'bici':'movilidad';
+     if(type==='fuerza'&&!allowed.includes('fuerza'))type=allowed.includes('bici')?'bici':'movilidad';
+     if(type==='funcional'&&!allowed.includes('fuerza'))type=allowed.includes('bici')?'bici':'movilidad';
+     if(x.injuryPain==='unsure'||x.injuryInstability==='unsure'||x.injuryClearance==='unsure'){type='movilidad';reason='Situación no confirmada: propuesta suave provisional hasta conocer las indicaciones profesionales.';}
+   }
    let q=planSession(date,type,Number(x.minutes)||40,x.location);
    if(type==='fuerza'&&(i+weekOffset)%4===2){
      q.title='Fuerza · Tren superior';q.exercises=[
@@ -127,4 +134,4 @@ function setupNext(e){
 function configureProfile(){onboarding(0)}
 
 selectProfiles();render();if(!p().setupComplete)onboarding(0);
-</script><script src="planner-extra.js?v=2"></script></body></html>
+</script><script src="planner-extra.js?v=3"></script></body></html>
