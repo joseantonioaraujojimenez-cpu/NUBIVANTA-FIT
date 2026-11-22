@@ -36,7 +36,7 @@ function fitGenerateMeals(){
  dates.forEach(function(d,day){
   types.forEach(function(meal,i){
    var choices=FIT_RECIPES.filter(function(r){return r[0]===meal&&!avoidedNames.includes(r[1].toLowerCase())&&!avoid.some(function(a){return (r[1]+' '+r[6]).toLowerCase().includes(a)})});
-   if(!choices.length)choices=FIT_RECIPES.filter(function(r){return r[0]===meal});
+   if(!choices.length)return; // No se fuerza una receta que incumpla las exclusiones indicadas.
    var r=choices[(day*3+i*7+Math.floor(new Date(d+'T12:00:00').getTime()/604800000))%choices.length];
    var factor=Math.min(1.6,Math.max(.65,target*portions[i]/r[2]));
    state.foodPlans.push({id:uid(),pid:p().id,date:d,meal:meal,name:r[1],kcal:Math.round(r[2]*factor),protein:Math.round(r[3]*factor),carbs:Math.round(r[4]*factor),fats:Math.round(r[5]*factor),ingredients:r[6],portion:Math.round(factor*100)});
