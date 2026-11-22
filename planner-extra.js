@@ -32,9 +32,10 @@ function fitGenerateMeals(){
  var portions=[.23,.34,.15,.28],types=['Desayuno','Comida','Merienda','Cena'];
  var target=Math.min(3800,Math.max(1400,num(p().kcal)||2200));
  var avoid=String(p().foodLimits||'').toLowerCase().split(/[,;\n]/).map(function(x){return x.trim()}).filter(function(x){return x.length>2});
+ var avoidedNames=(p().mealAvoid||[]).map(function(z){return z.toLowerCase()});
  dates.forEach(function(d,day){
   types.forEach(function(meal,i){
-   var choices=FIT_RECIPES.filter(function(r){return r[0]===meal&&!avoid.some(function(a){return (r[1]+' '+r[6]).toLowerCase().includes(a)})});
+   var choices=FIT_RECIPES.filter(function(r){return r[0]===meal&&!avoidedNames.includes(r[1].toLowerCase())&&!avoid.some(function(a){return (r[1]+' '+r[6]).toLowerCase().includes(a)})});
    if(!choices.length)choices=FIT_RECIPES.filter(function(r){return r[0]===meal});
    var r=choices[(day*3+i*7+Math.floor(new Date(d+'T12:00:00').getTime()/604800000))%choices.length];
    var factor=Math.min(1.6,Math.max(.65,target*portions[i]/r[2]));
@@ -52,6 +53,11 @@ function fitChangeMeal(id){
 function fitSaveMealChoice(id){
  var m=(state.foodPlans||[]).find(function(x){return x.id===id});if(!m)return;
  var choices=FIT_RECIPES.filter(function(r){return r[0]===m.meal&&r[1]!==m.name}),r=choices[Number(document.getElementById('fitChoice').value)];if(!r)return;
+ var original=m.name;
+ var pref=p();pref.mealSwapCounts=pref.mealSwapCounts||{};pref.mealAvoid=pref.mealAvoid||[];
+ var key=original.toLowerCase(),rec=pref.mealSwapCounts[key]||{name:r[1],count:0};
+ rec.count=rec.name===r[1]?rec.count+1:1;rec.name=r[1];pref.mealSwapCounts[key]=rec;
+ if(rec.count>=2&&!pref.mealAvoid.includes(original))pref.mealAvoid.push(original);
  var factor=m.kcal/r[2];m.name=r[1];m.protein=Math.round(r[3]*factor);m.carbs=Math.round(r[4]*factor);m.fats=Math.round(r[5]*factor);m.ingredients=r[6];m.portion=Math.round(factor*100);
  save();closeModal();render();
 }
@@ -166,4 +172,17 @@ function fitApplyExercise(wid,eid){
  if(document.getElementById('fitPreferExercise').checked||previous.count>=2)x.exercisePreferences[key]=newName;
  e.originalName=original;e.name=newName;
  if(save()){openWorkout(wid);toast('Alternativa guardada')}
+}
+
+function fitReviewPreferences(){
+ const x=p(),exercise=Object.entries(x.exercisePreferences||{}),avoided=x.mealAvoid||[];
+ const ex=exercise.map(([a,b])=>'<div class="checkrow"><span>'+esc(a)+' → '+esc(b)+'</span><button class="x" onclick="fitRemovePreference(\'exercise\',\''+encodeURIComponent(a)+'\')">Quitar</button></div>').join('');
+ const food=avoided.map(m=>'<div class="checkrow"><span>'+esc(m)+'</span><button class="x" onclick="fitRemovePreference(\'food\',\''+encodeURIComponent(m)+'\')">Quitar</button></div>').join('');
+ modal('Preferencias aprendidas','<p class="muted">Puedes quitar cualquier preferencia. La app deja de evitar un plato o sustituir un ejercicio a partir de entonces.</p><h3>Ejercicios preferidos</h3>'+(ex||'<p class="muted">Todavía no hay preferencias.</p>')+'<h3>Platos que sueles cambiar</h3>'+(food||'<p class="muted">Todavía no hay platos evitados.</p>'));
+}
+function fitRemovePreference(kind,key){
+ const name=decodeURIComponent(key),x=p();
+ if(kind==='exercise')delete (x.exercisePreferences||{})[name];
+ else x.mealAvoid=(x.mealAvoid||[]).filter(v=>v!==name);
+ save();fitReviewPreferences();
 }
