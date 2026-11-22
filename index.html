@@ -14,7 +14,11 @@ const generateWeek=function smartWeek(){
  const first=startWeek(selectedDate),x=p(),days=x.days||[],all=[];
  for(let i=0;i<7;i++){const date=isoAdd(first,i);if(days.includes(new Date(date+'T12:00:00').getDay()))all.push(date)}
  if(!all.length){toast('Selecciona los días disponibles');weekSettings();return}
- const goal=x.goal||'bienestar',weekOffset=Math.floor(new Date(first+'T12:00:00').getTime()/604800000)+(x.planVersion||0),restricted=!!x.special||/embarazo|operad|cirug|lesi[oó]n|dolor|rehabilitaci/i.test(x.restrictions||'');
+ const goal=x.goal||'bienestar',weekOffset=Math.floor(new Date(first+'T12:00:00').getTime()/604800000)+(x.planVersion||0),
+ history=/operad|cirug|menisc|ligamento|lesi[oó]n antigu|lesi[oó]n previa/i.test(x.restrictions||''),
+ currentRisk=/dolor actual|dolor al|me duele|inestabilidad|inflamad|rehabilitaci|no puedo|limitaci[oó]n actual/i.test(x.restrictions||''),
+ restricted=x.special==='embarazo'||x.special==='posparto'||x.special==='rehabilitacion'||currentRisk,
+ caution=history&&!restricted;
  let added=0;
  for(let i=0;i<all.length;i++){
    let date=all[i];if(own(state.plans).some(y=>y.date===date))continue;
@@ -50,6 +54,18 @@ const generateWeek=function smartWeek(){
        q.exercises=chosen.map(([name,sets,reps,rest])=>({id:uid(),name,sets,reps,rest,actual:[]}));
        q.title=type==='fuerza'?['Fuerza · Sesión A','Fuerza · Sesión B','Fuerza · Sesión C'][(i+weekOffset)%3]:['Funcional · A','Funcional · B','Funcional · C'][(i+weekOffset)%3];
      }
+   }
+   if(caution){
+     // Una operación pasada no bloquea todo el programa, pero requiere progresión y evitar gestos que causen molestias.
+     reason+=' Antecedentes de lesión: ajusta cargas y rangos, evita giros o saltos hasta tener autorización y suspende movimientos dolorosos.';
+     if(type==='funcional'){
+       q.title='Funcional controlado';q.exercises=[
+         ['Bisagra de cadera sin dolor',3,10,60],['Remo con goma',3,12,60],
+         ['Press o flexiones adaptadas',3,10,60],['Puente de glúteos',3,12,60],
+         ['Movilidad suave de cadera y tobillo',2,8,30]
+       ].map(([name,sets,reps,rest])=>({id:uid(),name,sets,reps,rest,actual:[]}));
+     }
+     if(type==='correr'){q.title='Resistencia de bajo impacto';q.type='bici';q.exercises=[{id:uid(),name:'Bicicleta estática suave (minutos)',sets:1,reps:Math.max(10,Number(x.minutes)||30),rest:0,actual:[]}]}
    }
    q.reason=reason;q.notes=reason;
    state.plans.push(q);added++;
