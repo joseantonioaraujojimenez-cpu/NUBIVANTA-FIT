@@ -73,3 +73,20 @@ function regenerateWeek(){
  p().planVersion=(p().planVersion||0)+1;
  generateWeek();
 }
+
+
+function injuryCheck(){
+ var x=p(),activity=(x.injuryActivities||[]);
+ var choice=function(name,title){return '<label>'+title+'</label><select name="'+name+'" required><option value="">Selecciona</option>'+[['no','No'],['yes','Sí'],['unsure','No estoy seguro/a']].map(function(pair){return '<option value="'+pair[0]+'" '+(x[name]===pair[0]?'selected':'')+'>'+pair[1]+'</option>'}).join('')+'</select>'};
+ var activities=['fuerza','bici','correr','padel'].map(function(v,i){return '<div class="checkrow"><input type="checkbox" name="injuryActivities" value="'+v+'" '+(activity.includes(v)?'checked':'')+'><span>'+['Fuerza de piernas','Bicicleta','Correr','Pádel y giros'][i]+'</span></div>'}).join('');
+ var html='<p class="muted">Has indicado una lesión u operación. ¿Cómo estás actualmente? Tus respuestas se guardarán en este perfil.</p><form onsubmit="saveInjuryCheck(event)">'+choice('injuryPain','¿Tienes dolor haciendo fuerza o bicicleta?')+choice('injuryInstability','¿Tienes inestabilidad, bloqueo o hinchazón después de entrenar?')+'<label>¿Qué actividades puedes realizar cómodamente ahora?</label>'+activities+choice('injuryClearance','¿Tienes autorización o pautas profesionales para los ejercicios que quieres hacer?')+'<div class="notice">Si hay dolor, bloqueo o inestabilidad, consulta antes de aumentar la intensidad. Estas preguntas no sustituyen una valoración médica.</div><button type="submit" class="btn">Guardar y generar semana</button></form>';
+ modal('Adaptemos tu entrenamiento',html);
+}
+function saveInjuryCheck(e){
+ e.preventDefault();
+ var f=new FormData(e.target),x=p();
+ ['injuryPain','injuryInstability','injuryClearance'].forEach(function(k){x[k]=f.get(k)});
+ x.injuryActivities=f.getAll('injuryActivities');x.injuryCheckComplete=true;
+ if(!save())return;
+ closeModal();generateWeek();
+}
