@@ -129,3 +129,41 @@ function fitWeekSummary(){
  const done=dates.filter(d=>workouts.some(w=>w.date===d)).length,avg=meals.length?Math.round(meals.reduce((a,m)=>a+m.kcal,0)/Math.max(1,new Set(meals.map(m=>m.date)).size)):0;
  modal('Resumen semanal','<div class="grid2"><div class="stat"><strong>'+done+'</strong><span class="small">Días con actividad</span></div><div class="stat"><strong>'+plans.length+'</strong><span class="small">Sesiones programadas</span></div><div class="stat"><strong>'+meals.length+'</strong><span class="small">Comidas registradas</span></div><div class="stat"><strong>'+avg+'</strong><span class="small">kcal/día con registros</span></div></div><p class="muted small">El promedio es solo de los días con comidas anotadas y no incluye alimentos sin registrar.</p><button class="btn secondary" onclick="closeModal();printReport()">Imprimir informe PDF</button>');
 }
+
+function fitExerciseOptions(name){
+ const n=name.toLowerCase(),eq=(p().equipment||'').toLowerCase(),loc=p().location||'casa';
+ const gym=loc==='gimnasio'||/gimnasio|prensa|máquina|maquina|smith|polea/.test(eq);
+ const bar=/barra|discos|rack/.test(eq)||gym;
+ const dumb=/mancuern|pesa|kettlebell/.test(eq)||gym;
+ const band=/goma|banda|elástic/.test(eq)||gym;
+ const choices=[];
+ const add=(value,need)=>{if(!need||need==='gym'&&gym||need==='bar'&&bar||need==='dumb'&&dumb||need==='band'&&band)choices.push(value)};
+ if(/sentadilla|zancada|prensa|escalón/.test(n)){add('Sentadilla a banco');add('Sentadilla goblet','dumb');add('Sentadilla libre con barra','bar');add('Prensa de piernas','gym');add('Zancada estática');}
+ else if(/remo|dominada|espalda/.test(n)){add('Remo con banda','band');add('Remo con mancuerna','dumb');add('Remo invertido');add('Remo en polea','gym');}
+ else if(/peso muerto|bisagra|puente de glúteos/.test(n)){add('Puente de glúteos');add('Bisagra de cadera sin carga');add('Peso muerto rumano con mancuernas','dumb');add('Peso muerto rumano con barra','bar');}
+ else if(/flexion|flexión|press|empuje/.test(n)){add('Flexiones inclinadas');add('Flexiones en pared');add('Press con mancuernas','dumb');add('Press en máquina','gym');}
+ else if(/carrera|correr|bicicleta|bici/.test(n)){add('Caminata rápida');add('Bicicleta estática');add('Remo ergómetro','gym');}
+ else{add('Variante sin material');add('Variante con banda','band');add('Variante con mancuernas','dumb')}
+ return [...new Set(choices)].filter(v=>v.toLowerCase()!==n);
+}
+function alternative(wid,eid){
+ let w=state.plans.find(z=>z.id===wid),e=w&&w.exercises.find(z=>z.id===eid);if(!e)return;
+ const opts=fitExerciseOptions(e.name);
+ modal('Cambiar ejercicio',`<p class="muted">Original: ${esc(e.name)}</p><p class="small muted">Opciones basadas en el material de tu perfil. No realices ejercicios que contradigan tus restricciones.</p>
+ <label>Alternativa</label><select id="fitExerciseChoice">${opts.map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join('')}<option value="custom">Otra alternativa</option></select>
+ <label>Otro ejercicio (opcional)</label><input id="fitCustomExercise" placeholder="Escribe un ejercicio">
+ <label class="checkrow"><input id="fitPreferExercise" type="checkbox" style="width:19px;min-height:19px"><span>Preferir este cambio en próximos planes</span></label>
+ <button class="btn" onclick="fitApplyExercise('${wid}','${eid}')">Guardar</button>`);
+}
+function fitApplyExercise(wid,eid){
+ let w=state.plans.find(z=>z.id===wid),e=w&&w.exercises.find(z=>z.id===eid);if(!e)return;
+ const custom=document.getElementById('fitCustomExercise').value.trim(),chosen=document.getElementById('fitExerciseChoice').value,newName=custom||chosen;
+ if(!newName||newName==='custom'){toast('Escribe una alternativa');return}
+ const x=p(),original=e.originalName||e.name,key=original.toLowerCase();
+ x.exerciseSwapCounts=x.exerciseSwapCounts||{};x.exercisePreferences=x.exercisePreferences||{};
+ let previous=x.exerciseSwapCounts[key]||{name:newName,count:0};
+ previous.count=previous.name===newName?previous.count+1:1;previous.name=newName;x.exerciseSwapCounts[key]=previous;
+ if(document.getElementById('fitPreferExercise').checked||previous.count>=2)x.exercisePreferences[key]=newName;
+ e.originalName=original;e.name=newName;
+ if(save()){openWorkout(wid);toast('Alternativa guardada')}
+}
