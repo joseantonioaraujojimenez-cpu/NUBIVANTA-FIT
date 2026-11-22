@@ -75,6 +75,9 @@ const generateWeek=function smartWeek(){
      }
      if(type==='correr'){q.title='Resistencia de bajo impacto';q.type='bici';q.exercises=[{id:uid(),name:'Bicicleta estática suave (minutos)',sets:1,reps:Math.max(10,Number(x.minutes)||30),rest:0,actual:[]}]}
    }
+   if(!restricted&&x.exercisePreferences){
+      q.exercises.forEach(e=>{const pref=x.exercisePreferences[e.name.toLowerCase()];if(pref){e.originalName=e.name;e.name=pref}});
+   }
    q.reason=reason;q.notes=reason;
    state.plans.push(q);added++;
  }
@@ -134,4 +137,4 @@ function setupNext(e){
 function configureProfile(){onboarding(0)}
 
 selectProfiles();render();if(!p().setupComplete)onboarding(0);
-</script><script src="planner-extra.js?v=5"></script></body></html>
+</script><script src="planner-extra.js?v=6"></script></body></html>
