@@ -70,5 +70,6 @@ function regenerateWeek(){
  var dates=fitMealDays(),pending=own(state.plans).filter(function(x){return dates.includes(x.date)&&!workDay(x.date).length});
  if(pending.length&&!confirm('¿Regenerar las sesiones aún no realizadas? Las ya registradas se conservarán.'))return;
  state.plans=state.plans.filter(function(x){return !pending.some(function(y){return y.id===x.id})});
+ p().planVersion=(p().planVersion||0)+1;
  generateWeek();
 }
