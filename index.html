@@ -33,6 +33,24 @@ const generateWeek=function smartWeek(){
    if(type==='fuerza'&&(i+weekOffset)%4===0){
      q.title='Fuerza · Cuerpo completo';q.exercises.push({id:uid(),name:'Movilidad de tobillo y cadera',sets:2,reps:8,rest:20,actual:[]});
    }
+   if(!restricted){
+     const strengthSets=[
+       [['Sentadilla goblet o a banco',3,10,90],['Peso muerto rumano',3,10,90],['Remo',3,10,75],['Flexiones',3,8,60],['Movilidad de cadera',2,8,30]],
+       [['Zancadas controladas',3,8,90],['Puente de glúteos',3,12,60],['Press de pecho',3,10,75],['Remo horizontal',3,10,75],['Movilidad de tobillos',2,8,30]],
+       [['Sentadilla o variante',3,8,120],['Bisagra de cadera',3,10,90],['Dominadas asistidas o remo',3,8,90],['Plancha',3,30,45],['Movilidad torácica',2,8,30]]
+     ];
+     const functionalSets=[
+       [['Sentadilla a banco',3,12,45],['Remo con goma',3,12,45],['Flexiones adaptadas',3,10,45],['Plancha',3,30,45]],
+       [['Subida a escalón bajo',3,10,50],['Press con mancuernas',3,10,60],['Peso muerto con mancuernas',3,10,60],['Movilidad de cadera',2,8,20]],
+       [['Bisagra de cadera',3,12,45],['Remo con banda',3,12,45],['Sentadilla con pausa',3,8,60],['Movilidad de tobillo',2,10,20]]
+     ];
+     if(type==='fuerza'||type==='funcional'){
+       let templates=type==='fuerza'?strengthSets:functionalSets;
+       let chosen=templates[(i+weekOffset)%templates.length];
+       q.exercises=chosen.map(([name,sets,reps,rest])=>({id:uid(),name,sets,reps,rest,actual:[]}));
+       q.title=type==='fuerza'?['Fuerza · Sesión A','Fuerza · Sesión B','Fuerza · Sesión C'][(i+weekOffset)%3]:['Funcional · A','Funcional · B','Funcional · C'][(i+weekOffset)%3];
+     }
+   }
    q.reason=reason;q.notes=reason;
    state.plans.push(q);added++;
  }
